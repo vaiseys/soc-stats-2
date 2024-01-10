@@ -7,9 +7,464 @@ code-copy: hover
 fontsize: 22pt
 format: revealjs
 embed-resources: true
+editor: 
+  markdown: 
+    wrap: 72
 ---
 
-## Hello world
+```{r}
+library(tidyverse)
+library(knitr)
+library(here)
+```
 
-This is text
+# Part I: Theoretical background
 
+## Asking causal questions
+
+-   Does more education *cause* higher wages?
+-   Does participating in a job training program *cause* a higher
+    probability of employment?
+-   Do boycotts *cause* a drop in a company's share price?
+-   These are tough questions!
+
+## Threats to causal inference
+
+```{r confounding, out.width="50%"}
+knitr::include_graphics(here("images", "confounding.JPG"))
+
+```
+
+## Key term: Identification
+
+How do we *identify* the effect of a treatment (cause) on an outcome?
+
+## Experimental independent variables
+
+-   What is an experiment?
+-   How do experiments solve the problem we just talked about?
+
+## Experiments are great!
+
+Assuming successful randomization to treatment and control, you **know**
+it's the treatment that's causing the effect.
+
+## Experiments can't do everything
+
+-   ethics
+-   external validity
+-   often non-representative
+-   some treatments are hard or impossible to assign randomly
+    -   motherhood
+    -   divorce
+    -   boycotts
+
+## Why experiments work
+
+## Some notation
+
+$T$ a binary treatment variable
+
+$Y$ the value of the outcome we observe
+
+$Y^0$ the value the outcome *would* take if $T=0$
+
+$Y^1$ the value the outcome *would* take if $T=1$
+
+*Let's think about the last two a bit more carefully...*
+
+## The world before the experiment
+
+```{r}
+d_before <- tibble(
+  Subject = c("Andrew", "Barb", "Catherine", "David") ,
+  Y0 = c(2,3,3,2) ,
+  Y1 = c(3,4,4,3) ,
+  T = as.numeric(NA_integer_),
+  Y = as.numeric(NA_integer_) )
+d_before %>% kable()
+```
+
+What do these numbers mean?
+
+## The world after the experiment
+
+```{r}
+d_after <- tibble(
+  Subject = c("Andrew", "Barb", "Catherine", "David") ,
+  Y0 = c(NA,3,NA,2) ,
+  Y1 = c(3,NA,4,NA) ,
+  T = c(1,0,1,0),
+  Y = c(3,3,4,2) )
+d_after %>% kable()
+```
+
+$$ Y = TY^1+(1-T)Y^0 $$
+
+## Potential outcomes and counterfactuals
+
+-   $Y = Y^1$ for $T = 1$
+-   $Y = Y^0$ for $T = 0$
+-   We *can't know* $Y^1$ for those who are $T=0$
+-   We *can't know* $Y^0$ for those who are $T=1$
+-   This is the **fundamental problem of causal inference.**
+
+## Potential outcomes and counterfactuals
+
+-   $Y^0$ and $Y^1$ are *potential outcomes*.
+-   In the real world, $T$ is either 1 or 0 for each case.
+-   We see $Y^1$ or $Y^0$, but never both.
+-   When $T=0$, $Y^1$ is *counterfactual*
+-   When $T=1$, $Y^0$ is *counterfactual*
+
+## What do we want to know?
+
+We really care about the difference between $Y^0$ and $Y^1$. (Why?)
+
+Let $\delta_i = y^1_i - y^0_i$
+
+$E[\delta]=E[Y^1-Y^0]$
+
+$E[\delta]=E[Y^1]-E[Y^0]$
+
+This is the definition of a **treatment effect**.
+
+## Assume an experiment: what is $E[\delta]$?
+
+```{r}
+d_before %>% kable()
+```
+
+If we could see this (invisible) world, what would be our calculation of
+the treatment effect?
+
+**Why can't we make these calculations in real life?**
+
+## Assume an experiment: what is $E[\delta]$?
+
+```{r}
+d_after %>% kable()
+```
+
+**Does this give us the right answer? Why?**
+
+## Why do experiments work?
+
+$T \bot Y^0$
+
+$T \bot Y^1$
+
+$E[Y^0 | T = 0] = E[Y^0 | T = 1 ]$
+
+$E[Y^1 | T = 0] = E[Y^1 | T = 1 ]$
+
+## Or in other words...
+
+In a properly executed experiment, there is no association between the
+potential outcome variables and treatment assignment.
+
+$E[Y^0 | T = 0] \simeq E[Y^0]$
+
+$E[Y^1 | T = 1] \simeq E[Y^1]$
+
+So...
+
+$E[\delta] = E[Y|T=1]-E[Y|T=0]$
+
+The difference between the treatment average and the control average
+
+## What is this treatment effect?
+
+$E[\delta]$ is the expected value (mean) of the difference between each
+unit's value of $Y^1$ and $Y^0$. It is the **average treatment effect
+(ATE).** In a sample, this is the **sample average treatment effect
+(SATE).**
+
+Even though the individual differences are unobservable (because either
+$Y^0$ or $Y^1$ will be counterfactual for each unit), we can estimate
+the mean difference via experiment.
+
+$$\text{SATE} = \frac{1}{n}\sum_{i=1}^{n}(y^1_i - y^0_i)$$
+
+## Randomization
+
+-   Experiments identify the SATE because cases are randomly assigned to
+    the treatment and control group and are, therefore, identical *on
+    average*, on all pre-treatment characteristics.
+-   Experiments are sometimes called **randomized controlled trials**
+    (or RCTs)
+
+## Bias in observational data
+
+1.  Treated and control cases might be different from each other even in
+    the same treatment state (**baseline bias**)
+2.  Treated and control cases might respond differently to treatment
+    (**treatment effect heterogeneity**)
+
+```{r confounding2, out.width="40%"}
+knitr::include_graphics(here("images", "confounding.JPG"))
+```
+
+## Key term: baseline bias
+
+```{r}
+d_college1 <- tibble(
+  Subject = c("Andrew", "Barb", "Catherine", "David") ,
+  Y0 = c(4000,2000,3000,3000) ,
+  Y1 = c(4000,2000,3000,3000) ,
+  T = NA_integer_,
+  Y = NA_integer_ )
+d_college1 %>% kable()
+
+```
+
+## Baseline bias
+
+```{r}
+d_college2 <- tibble(
+  Subject = c("Andrew", "Barb", "Catherine", "David") ,
+  Y0 = c(NA,2000,NA,3000) ,
+  Y1 = c(4000,NA,3000,NA) ,
+  T = c(1,0,1,0),
+  Y = c(4000,2000,3000,3000) )
+d_college2 %>% kable()
+
+```
+
+Here, the people who go to college have different *baseline* earnings
+that have nothing to do with going to college.
+
+## The "naive estimator"
+
+```{r}
+d_college2 %>% kable()
+
+```
+
+$$\hat{\delta}_{naive} = E[Y | T = 1] - E[Y | T = 0]$$
+
+$$\hat{\delta}_{naive} = 3500 - 2500 = 1000$$
+
+Is this a good estimate of the SATE? Why or why not?
+
+## Key term: treatment heterogeneity
+
+The treatment may not have a single effect, but may have different
+effects for different groups in the population. If the treatment and
+control groups (would) respond differently to treatment, this can bias
+the estimate of the effect.
+
+## Example 1
+
+```{r}
+d_college3 <- tibble(
+  Subject = c("Andrew", "Barb", "Catherine", "David") ,
+  Y0 = c(2000,2000,2000,2000) ,
+  Y1 = c(4000,2000,4000,2000) ,
+  T = NA_integer_,
+  Y = NA_integer_ )
+d_college3 %>% kable()
+
+```
+
+What is the effect of a college degree here?
+
+## Example 1
+
+```{r}
+d_college3obs <- tibble(
+  Subject = c("Andrew", "Barb", "Catherine", "David") ,
+  Y0 = c(NA,2000,NA,2000) ,
+  Y1 = c(4000,NA,4000,NA) ,
+  T = c(1,0,1,0),
+  Y = c(4000,2000,4000,2000) )
+d_college3obs %>% kable()
+```
+
+How might we calculate the effect of a college degree here?
+
+Does this give the right answer? Why or why not?
+
+## Example 2
+
+```{r}
+d_college4 <- tibble(
+  Subject = c("Andrew", "Barb", "Catherine", "David") ,
+  Y0 = c(3000,2000,3000,2000) ,
+  Y1 = c(4000,3500,4000,3500) ,
+  T = NA_integer_,
+  Y = NA_integer_ )
+d_college4 %>% kable()
+
+```
+
+What is the effect of a college degree here?
+
+## Example 3
+
+```{r}
+d_college4obs <- tibble(
+  Subject = c("Andrew", "Barb", "Catherine", "David") ,
+  Y0 = c(NA,2000,NA,2000) ,
+  Y1 = c(4000,NA,4000,NA) ,
+  T = c(1,0,1,0),
+  Y = c(4000,2000,4000,2000) )
+d_college4obs %>% kable(align = "lcccc")
+
+```
+
+How might we calculate the effect of a college degree on earnings here?
+
+Does this give the right answer? Why or why not?
+
+## Three types of treatment effects
+
+- Average treatment effect (**ATE**)
+- Average treatment effect on the treated (**ATT** or ATET)
+- Average treatment effect on the controls (or untreated) (**ATC** or
+    ATU)
+
+Sometimes you will see these prefixed with P for "population" (e.g.,
+PATT = population ATT) or S for "sample" (e.g., SATT = sample ATT).
+Sample estimates are interpreted conditional on the sample data.
+
+## What is the difference?
+
+- **ATE** is $E(Y^1 - Y^0)$ for *all* units (effect of *switching*)
+
+- **ATT** is $E(Y^1 - Y^0)$ for *treated* units (effect of *taking
+    away* treatment)
+
+- **ATC** is $E(Y^1 - Y^0)$ for *untreated* units (effect of *adding*
+    treatment)
+
+## Exercise: calculating treatment effects
+
+| Group          | $E(Y^1)$ | $E(Y^0)$ |
+|:---------------|:--------:|:--------:|
+| College degree | **1000** |  *600*   |
+| No degree      |  *800*   | **500**  |
+
+If 30% of the population has a degree... 
+
+- What is the naive estimate? 
+- What are the ATE, ATT, and ATC?
+
+::: notes
+Let's say these are weekly earnings and that we somehow have access to
+this counterfactual information
+
+500 400 300 330 (how did you get that?) \[.7\*300 + .3*\**400\]
+:::
+
+## Intro to DAGs for causal systems
+
+:::: {.columns}
+
+::: {.column width="60%"}
+
+```{r housedag , out.width="100%", fig.asp = 1}
+library(ggdag)
+
+dag1 <- dagify( Y ~ T + X ,
+                T ~ S ,
+                X ~ U ,
+                S ~ U ,
+                exposure = "T" ,
+                outcome = "Y" ,
+                coords = list( x=c(T=.2,S=0,U=1,Y=2.2,X=2) 
+                               , y=c(T=0,Y=0,S=1,X=1,U=2) )) %>% 
+  tidy_dagitty() %>% 
+  mutate( observed = if_else(name=="U" , "No" , "Yes" ))
+
+
+housedag <- dag1 %>% 
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend, 
+             shape = observed )) +
+  geom_dag_edges() +
+  geom_dag_point() +
+  geom_dag_text(col = "black" ) +
+  theme_dag(legend.position = "none") +
+  scale_shape_discrete(solid = FALSE) +
+  scale_shape_manual(values = c(1,0)) +
+  scale_y_continuous(limits = c(-1.2,2.2)) +
+  scale_x_continuous(limits = c(-.2,2.4))
+
+housedag
+```
+
+:::
+
+::: {.column width="40%"}
+
+- **Y**: outcome
+
+- **T**: treatment
+
+- **U**: unobserved confounder
+
+- **S**: affects selection into T
+
+- **X**: affects Y directly
+
+:::
+
+::::
+
+## Regression vs. matching/weighting
+
+**Regression** attempts to identify $T \rightarrow Y$ by adjusting for
+$X$ while regressing $Y$ on $T$
+
+**Matching and weighting** attempt to identify $T \rightarrow Y$ by
+ensuring that $S$ has the same distribution for all values of $T$
+
+Both are strategies to **close the backdoor path** between $T$ and $Y$
+
+## Caveat: neither works here
+
+:::: {.columns}
+
+::: {.column width="60%"}
+
+```{r faildag , out.width="100%", fig.asp = 1}
+dag2 <- dagify( Y ~ T + X + V,
+                T ~ S + V ,
+                X ~ U ,
+                S ~ U ,
+                exposure = "T" ,
+                outcome = "Y" ,
+                coords = list( x=c(T=.2,S=0,U=1,Y=2.2,X=2,V=1.2) 
+                               , y=c(T=0,Y=0,S=1,X=1,U=2,V=-1) )) %>% 
+  tidy_dagitty() %>% 
+  mutate( observed = if_else(name=="U" | name=="V" , "No" , "Yes" ))
+
+
+faildag <- dag2 %>% 
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend, 
+             shape = observed )) +
+  geom_dag_edges() +
+  geom_dag_point() +
+  geom_dag_text(col = "black" ) +
+  theme_dag(legend.position = "none") +
+  scale_shape_discrete(solid = FALSE) +
+  scale_shape_manual(values = c(1,0)) +
+  scale_y_continuous(limits = c(-1.2,2.2)) +
+  scale_x_continuous(limits = c(-.2,2.4))
+
+faildag
+
+```
+
+:::
+
+::: {.column width="40%"}
+
+
+These techniques only allow us to account for *observed* differences
+between treated and control cases. If $V$ is unobserved, we can't close
+the backdoor path with either of these approaches.
+
+:::
+
+::::
