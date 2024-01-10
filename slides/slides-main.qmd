@@ -1,0 +1,15 @@
+---
+title: "Soc 723"
+author: Stephen Vaisey
+subtitle: "Spring 2024"
+code-line-numbers: false
+code-copy: hover
+fontsize: 22pt
+format: revealjs
+embed-resources: true
+---
+
+## Hello world
+
+This is text
+
