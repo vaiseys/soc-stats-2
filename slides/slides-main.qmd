@@ -4,7 +4,7 @@ author: Stephen Vaisey
 subtitle: "Spring 2024"
 code-line-numbers: false
 code-copy: hover
-fontsize: 22pt
+fontsize: 24pt
 format: revealjs
 embed-resources: true
 editor: 
@@ -300,7 +300,7 @@ d_college4 %>% kable()
 
 What is the effect of a college degree here?
 
-## Example 3
+## Example 2
 
 ```{r}
 d_college4obs <- tibble(
@@ -317,7 +317,7 @@ How might we calculate the effect of a college degree on earnings here?
 
 Does this give the right answer? Why or why not?
 
-## Three types of treatment effects
+## Three basic types of treatment effects
 
 - Average treatment effect (**ATE**)
 - Average treatment effect on the treated (**ATT** or ATET)
@@ -357,6 +357,20 @@ this counterfactual information
 500 400 300 330 (how did you get that?) \[.7\*300 + .3*\**400\]
 :::
 
+## What is your estimand?
+
+```{r}
+knitr::include_graphics(here("images", "lundberg-1.PNG"))
+```
+
+::: {style="font-size: .5em"}
+
+Lundberg, I., Johnson, R., & Stewart, B. M. (2021). What Is Your Estimand? Defining the Target Quantity Connects Statistical Evidence to Theory. *American Sociological Review*, 86(3), 532–565.
+
+:::
+
+# Directed Acyclic Graphs
+
 ## Intro to DAGs for causal systems
 
 :::: {.columns}
@@ -372,10 +386,10 @@ dag1 <- dagify( Y ~ T + X ,
                 S ~ U ,
                 exposure = "T" ,
                 outcome = "Y" ,
-                coords = list( x=c(T=.2,S=0,U=1,Y=2.2,X=2) 
-                               , y=c(T=0,Y=0,S=1,X=1,U=2) )) %>% 
+                coords = list( x = c(T = .2, S = 0, U = 1, Y = 2.2, X = 2) 
+                               , y = c(T = 0, Y = 0, S = 1, X = 1, U = 2) )) %>% 
   tidy_dagitty() %>% 
-  mutate( observed = if_else(name=="U" , "No" , "Yes" ))
+  mutate( observed = if_else(name == "U" , "No" , "Yes" ))
 
 
 housedag <- dag1 %>% 
