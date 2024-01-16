@@ -5,7 +5,9 @@ subtitle: "Spring 2024"
 code-line-numbers: false
 code-copy: hover
 fontsize: 24pt
-format: revealjs
+format: 
+  revealjs:
+    slide-number: true
 embed-resources: true
 editor: 
   markdown: 
