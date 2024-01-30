@@ -2,7 +2,6 @@ library(tidyverse)
 library(broom)
 library(dagitty)
 
-
 set.seed(123)
 sampsize <- 100000  # big enough to avoid much samp. variation
 
@@ -33,11 +32,17 @@ dagitty("dag{
 # simulated data
 d <- tibble(
   U = rbern(sampsize, .5),
-  S = rbern(sampsize, .25 + .50*U),
-  X = rbern(sampsize, .25 + .50*U),
-  T = rbern(sampsize, .25 + .50*S),
-  Y = 1*T + 1*X + rnorm(sampsize, 0, 1)
+  S = rbern(sampsize, U*.25 + (1-U)*.75),
+  X = rbern(sampsize, U*.25 + (1-U)*.75),
+  T = rbern(sampsize, S*.75 + (1-S)*.25),
+  Y = 1*T + 3*X + rnorm(sampsize, 0, 1)
 )
+
+# viz
+ggplot(d,
+       aes(x = Y)) +
+  geom_histogram(color = "white") +
+  theme_light()
 
 # models
 ## no adjustment
@@ -55,6 +60,38 @@ m2 <- lm(Y ~ T + S,
          data = d)
 mytidy(m2)
 
+## overkill (for identification)
+m3 <- lm(Y ~ T + S + X,
+         data = d)
+mytidy(m3)
 
 ### EXAMPLE 2 ####
+# dag
+dagitty("dag{
+        U -> S ;
+        U -> X ;
+        S -> T ;
+        X -> Y ;
+        T -> Z ;
+        Z -> Y ;
+        T -> Y}") |> plot()
 
+# simulated data
+d <- tibble(
+  U = rbern(sampsize, .5),
+  S = rbern(sampsize, U*.25 + (1-U)*.75),
+  X = rbern(sampsize, U*.25 + (1-U)*.75),
+  T = rbern(sampsize, S*.75 + (1-S)*.25),
+  Z = .5*T + rnorm(sampsize, 0, 1),
+  Y = 1*T + 3*X + .5*Z + rnorm(sampsize, 0, 1)
+)
+
+# models
+m0 <- lm(Y ~ T, data = d)
+mytidy(m0)
+
+m1 <- lm(Y ~ T + X, data = d)
+mytidy(m1)
+
+m2 <- lm(Y ~ T + X + Z, data = d)
+mytidy(m2)
