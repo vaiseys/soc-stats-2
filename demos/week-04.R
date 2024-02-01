@@ -124,8 +124,8 @@ mytidy(ccmod2)
 library(gssr)
 library(marginaleffects)
 
+# data
 gss2022 <- gss_get_yr(2022)
-
 d <- gss2022 |> 
   select(tvhours, degree, madeg, padeg) |> 
   mutate(pardeg = pmax(madeg, padeg, na.rm = TRUE),
@@ -134,14 +134,19 @@ d <- gss2022 |>
   select(tvhours, college, parcol) |> 
   drop_na()
 
+# model with heterogeneity
 mod1 <- lm(tvhours ~ college * parcol, 
            data = d)
-mytidy(mod1)
+mytidy(mod1) # spend time interpreting this!!!
 
+# ATE estimate
 avg_slopes(mod1,
-           variables = "college")
+           variables = "college") |> 
+  tidy()
 
-d |> 
-  group_by(college) |> 
-  summarize(mean_pc = mean(parcol))
+# ATT/ATU estimate
+avg_slopes(mod1,
+           variables = "college",
+           by = "college") |> # separately by treatment group
+  tidy()
 
