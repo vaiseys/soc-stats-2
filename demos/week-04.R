@@ -95,3 +95,53 @@ mytidy(m1)
 
 m2 <- lm(Y ~ T + X + Z, data = d)
 mytidy(m2)
+
+### MORE STUFF ####
+
+# conditioning on a collider
+dcc <- tibble(
+  x = rnorm(10000, 0, 1),
+  y = rnorm(10000, 0, 1),
+  log_odds_c = x + y,
+  prob_c = exp(log_odds_c) / (1 + exp(log_odds_c)),
+  c = rbern(10000, prob_c)
+)
+
+dcc_yes <- dcc |> 
+  filter(c == 1)
+
+ccmod <- lm(y ~ x,
+            data = dcc_yes)
+mytidy(ccmod)
+
+### andres version
+ccmod2 <- lm(y ~ x + c,
+             data = dcc)
+mytidy(ccmod2)
+
+
+# marginal effects
+library(gssr)
+library(marginaleffects)
+
+gss2022 <- gss_get_yr(2022)
+
+d <- gss2022 |> 
+  select(tvhours, degree, madeg, padeg) |> 
+  mutate(pardeg = pmax(madeg, padeg, na.rm = TRUE),
+         college = if_else(degree >= 3, 1L, 0L),
+         parcol = if_else(pardeg >= 3, 1L, 0L)) |>
+  select(tvhours, college, parcol) |> 
+  drop_na()
+
+mod1 <- lm(tvhours ~ college * parcol, 
+           data = d)
+mytidy(mod1)
+
+avg_slopes(mod1,
+           variables = "college")
+
+d |> 
+  group_by(college) |> 
+  summarize(mean_pc = mean(parcol))
+
