@@ -136,12 +136,33 @@ d <- gss2022 |>
 m1 <- glm(abany ~ college * (parcol + female + age + I(age^2)),
           data = d,
           family = binomial)
+mytidy(m1) # interpret this!!!
 
 # ATE estimate
 avg_slopes(m1,
            variables = "college",
            type = "response") |> 
   tidy()
+
+# rowwise ATE
+mfx <- slopes(m1,
+              variables = "college",
+              type = "response")
+select(mfx, estimate, college, parcol, female, age) |> View()
+
+# plot distribution of mfx (if you want)
+ggplot(mfx,
+       aes(x = estimate)) +
+  geom_histogram(color = "white") +
+  theme_light() +
+  facet_wrap(~female)
+
+ggplot(mfx,
+       aes(x = age,
+           y = estimate)) +
+  geom_point(alpha = .3) +
+  theme_light()
+  
 
 # ATT/ATU estimate
 avg_slopes(m1,
