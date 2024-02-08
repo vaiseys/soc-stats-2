@@ -71,17 +71,17 @@ mfx_lm2 <- slopes(lm2,
 View(select(mfx_lm2, estimate, female, parcol, age))
 
 ## log-link model with no interactions
-## effect differ because the log link is MULTIPLICATIVE
+## effects differ because the log link is MULTIPLICATIVE
 p1 <- glm(realrinc ~ college + parcol + female + age + I(age^2), 
           data = d,
           family = "quasipoisson")
 mytidy(p1) # spend time interpreting this!!!
 
-mfx_p1 <- slopes(p1,
+mfx_qp2 <- slopes(qp1,
                  variables = "college")
-View(select(mfx_p1, estimate, female, parcol, age))
+View(select(mfx_qp1, estimate, female, parcol, age))
 
-## the qp1 model has different estimates because of BOTH MULT. and INTERACTIONS
+## qp1 (above) has different estimates because of BOTH MULT. and INTERACTIONS
 
 ## now back to the main story...
 # ATT/ATU estimate
@@ -164,3 +164,40 @@ avg_slopes(m1,
            type = "response",
            hypothesis = "pairwise") |> 
   tidy()
+
+### Baseline Bias and Heterogeneity ####
+
+## version 1
+set.seed(12345)
+numobs <- 1000000
+
+simdata <- tibble(
+  s = rbinom(numobs, 1, .5),
+  y0 = rnorm(numobs, 2000 + 1000*s, 500),
+  y1 = rnorm(numobs, 3000 + 1000*s, 500),
+  d = rbinom(numobs, 1, .25 + .5*s),
+  y = d*y1 + (1-d)*y0
+)
+
+simdata |> 
+  group_by(d) |> 
+  summarize(y0 = mean(y0),
+            y1 = mean(y1))
+
+## version 2
+set.seed(12345)
+numobs <- 1000000
+
+simdata <- tibble(
+  s = rbinom(numobs, 1, .5),
+  y0 = rnorm(numobs, 2000 + 1000*s, 500),
+  y1 = rnorm(numobs, 3000 + 1500*s, 500),
+  d = rbinom(numobs, 1, .25 + .5*s),
+  y = d*y1 + (1-d)*y0
+)
+
+simdata |> 
+  group_by(d) |> 
+  summarize(y0 = mean(y0),
+            y1 = mean(y1))
+
