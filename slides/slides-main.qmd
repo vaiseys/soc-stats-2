@@ -8,6 +8,7 @@ fontsize: 24pt
 format: 
   revealjs:
     slide-number: true
+    theme: resources/custom.scss
 embed-resources: true
 editor: 
   markdown: 
@@ -18,9 +19,11 @@ editor:
 library(tidyverse)
 library(knitr)
 library(here)
+library(tinytable)
+library(broom)
 ```
 
-# Part I: Theoretical background
+# Theoretical background
 
 ## Asking causal questions
 
@@ -84,7 +87,7 @@ d_before <- tibble(
   Y1 = c(3,4,4,3) ,
   T = as.numeric(NA_integer_),
   Y = as.numeric(NA_integer_) )
-d_before %>% kable()
+d_before |> kable()
 ```
 
 What do these numbers mean?
@@ -98,7 +101,7 @@ d_after <- tibble(
   Y1 = c(3,NA,4,NA) ,
   T = c(1,0,1,0),
   Y = c(3,3,4,2) )
-d_after %>% kable()
+d_after |> kable()
 ```
 
 $$ Y = TY^1+(1-T)Y^0 $$
@@ -134,7 +137,7 @@ This is the definition of a **treatment effect**.
 ## Assume an experiment: what is $E[\delta]$?
 
 ```{r}
-d_before %>% kable()
+d_before |> kable()
 ```
 
 If we could see this (invisible) world, what would be our calculation of
@@ -145,7 +148,7 @@ the treatment effect?
 ## Assume an experiment: what is $E[\delta]$?
 
 ```{r}
-d_after %>% kable()
+d_after |> kable()
 ```
 
 **Does this give us the right answer? Why?**
@@ -216,7 +219,7 @@ d_college1 <- tibble(
   Y1 = c(4000,2000,3000,3000) ,
   T = NA_integer_,
   Y = NA_integer_ )
-d_college1 %>% kable()
+d_college1 |> kable()
 
 ```
 
@@ -229,7 +232,7 @@ d_college2 <- tibble(
   Y1 = c(4000,NA,3000,NA) ,
   T = c(1,0,1,0),
   Y = c(4000,2000,3000,3000) )
-d_college2 %>% kable()
+d_college2 |> kable()
 
 ```
 
@@ -239,7 +242,7 @@ that have nothing to do with going to college.
 ## The "naive estimator"
 
 ```{r}
-d_college2 %>% kable()
+d_college2 |> kable()
 
 ```
 
@@ -265,7 +268,7 @@ d_college3 <- tibble(
   Y1 = c(4000,2000,4000,2000) ,
   T = NA_integer_,
   Y = NA_integer_ )
-d_college3 %>% kable()
+d_college3 |> kable()
 
 ```
 
@@ -280,7 +283,7 @@ d_college3obs <- tibble(
   Y1 = c(4000,NA,4000,NA) ,
   T = c(1,0,1,0),
   Y = c(4000,2000,4000,2000) )
-d_college3obs %>% kable()
+d_college3obs |> kable()
 ```
 
 How might we calculate the effect of a college degree here?
@@ -296,7 +299,7 @@ d_college4 <- tibble(
   Y1 = c(4000,3500,4000,3500) ,
   T = NA_integer_,
   Y = NA_integer_ )
-d_college4 %>% kable()
+d_college4 |> kable()
 
 ```
 
@@ -311,7 +314,7 @@ d_college4obs <- tibble(
   Y1 = c(4000,NA,4000,NA) ,
   T = c(1,0,1,0),
   Y = c(4000,2000,4000,2000) )
-d_college4obs %>% kable(align = "lcccc")
+d_college4obs |> kable(align = "lcccc")
 
 ```
 
@@ -326,9 +329,13 @@ Does this give the right answer? Why or why not?
 - Average treatment effect on the controls (or untreated) (**ATC** or
     ATU)
 
+::: aside
+
 Sometimes you will see these prefixed with P for "population" (e.g.,
 PATT = population ATT) or S for "sample" (e.g., SATT = sample ATT).
 Sample estimates are interpreted conditional on the sample data.
+
+:::
 
 ## What is the difference?
 
@@ -365,10 +372,8 @@ this counterfactual information
 knitr::include_graphics(here("images", "lundberg-1.PNG"))
 ```
 
-::: {style="font-size: .5em"}
-
+::: footer
 Lundberg, I., Johnson, R., & Stewart, B. M. (2021). What Is Your Estimand? Defining the Target Quantity Connects Statistical Evidence to Theory. *American Sociological Review*, 86(3), 532–565.
-
 :::
 
 # Directed Acyclic Graphs
@@ -389,12 +394,12 @@ dag1 <- dagify( Y ~ T + X ,
                 exposure = "T" ,
                 outcome = "Y" ,
                 coords = list( x = c(T = .2, S = 0, U = 1, Y = 2.2, X = 2) 
-                               , y = c(T = 0, Y = 0, S = 1, X = 1, U = 2) )) %>% 
-  tidy_dagitty() %>% 
+                               , y = c(T = 0, Y = 0, S = 1, X = 1, U = 2) )) |> 
+  tidy_dagitty() |> 
   mutate( observed = if_else(name == "U" , "No" , "Yes" ))
 
 
-housedag <- dag1 %>% 
+housedag <- dag1 |> 
   ggplot(aes(x = x, y = y, xend = xend, yend = yend, 
              shape = observed )) +
   geom_dag_edges() +
@@ -451,12 +456,12 @@ dag2 <- dagify( Y ~ T + X + V,
                 exposure = "T" ,
                 outcome = "Y" ,
                 coords = list( x=c(T=.2,S=0,U=1,Y=2.2,X=2,V=1.2) 
-                               , y=c(T=0,Y=0,S=1,X=1,U=2,V=-1) )) %>% 
-  tidy_dagitty() %>% 
+                               , y=c(T=0,Y=0,S=1,X=1,U=2,V=-1) )) |> 
+  tidy_dagitty() |> 
   mutate( observed = if_else(name=="U" | name=="V" , "No" , "Yes" ))
 
 
-faildag <- dag2 %>% 
+faildag <- dag2 |> 
   ggplot(aes(x = x, y = y, xend = xend, yend = yend, 
              shape = observed )) +
   geom_dag_edges() +
@@ -484,3 +489,586 @@ the backdoor path with either of these approaches.
 :::
 
 ::::
+
+# Exact Matching
+
+
+## The logic of exact matching
+
+:::{.incremental}
+
+- We want to compare "apples to apples"
+- In an experiment, we compare groups who differ only in treatment 
+status
+- We want to simulate that by comparing groups that are similar in all 
+(known) respects except the treatment
+
+:::
+
+
+## Simulation
+
+:::{.r-stretch}
+
+```{r sdag}
+#| fig-asp: 1
+
+dag3 <- dagify( Y ~ T + U ,
+                T ~ S ,
+                S ~ U ,
+                exposure = "T" ,
+                outcome = "Y" ,
+                coords = list( x=c(T=.2,S=0,U=1,Y=2.2) 
+                               , y=c(T=0,Y=0,S=1,U=2) )) |> 
+  tidy_dagitty() |> 
+  mutate(observed = if_else(name=="U", "No", "Yes"))
+
+
+sdag <- dag3 |> 
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend, 
+             shape = observed )) +
+  geom_dag_edges() +
+  geom_dag_point() +
+  geom_dag_text(col = "black" ) +
+  theme_dag(legend.position = "none") +
+  scale_shape_discrete(solid = FALSE) +
+  scale_shape_manual(values = c(1,0)) +
+  scale_y_continuous(limits = c(-1.2,2.2)) +
+  scale_x_continuous(limits = c(-.2,2.4))
+
+sdag
+```
+:::
+
+## Simulation
+
+```{r, echo = TRUE}
+set.seed(1234)
+
+# create the data 
+
+obs <- 1e6   # 1M observations to minimize randomness
+
+d <- tibble(
+  U = rbinom(obs, 1, .5) ,                          # unobserved difference
+  S = rbinom(obs, 1, .25 + .5*U) ,                  # U -> S
+  T = rbinom(obs, 1, .25 + .5*S) ,                  # S -> T
+  Y0 = round(2000 + 2000*U + rnorm(obs, 0, 500)) ,  # untreated outcome
+  Y1 = round(3000 + 2000*U + rnorm(obs, 0, 500)) ,  # treated outcome
+  Y = T*Y1 + (1-T)*Y0) |>                           # observed Y 
+  select(-U, -(Y0:Y1))                              # keep observed variables
+
+```
+
+
+## Naive estimate
+
+```{r, echo = TRUE}
+d |> group_by(T) |> summarize(mY = round(mean(Y)))
+
+lm( Y ~ T , data = d )
+```
+
+## Subclassifying on *S*
+
+```{r, echo = FALSE}
+d |> 
+  group_by(S, T) |> 
+  summarize(mean_y = mean(Y)) |>
+  tt() |> 
+  format_tt(digits = 2)
+```
+
+What is the difference within levels of _S_? Does this give us the right answer? Why?
+
+
+## Review: experimental assumptions
+
+In an experiment, the treatment and control groups are otherwise the same.
+
+**Assumption 1:** $E(Y^1|T=1) = E(Y^1|T=0)$
+
+**Assumption 2:** $E(Y^0|T=1) = E(Y^0|T=0)$
+
+## Conditional Independence Assumption (CIA)
+
+There exist some observable variables, $S$, which *completely account* for the differences between the treatment and control groups.
+
+**Assumption 1-S:** $E(Y^1|T=1,S) = E(Y^1|T=0,S)$
+
+**Assumption 2-S:** $E(Y^0|T=1,S) = E(Y^0|T=0,S)$
+
+. . .
+
+::: aside
+**Making this assumption, we can assume that, conditional on *S*, we can (in essence) observe the counterfactual**
+:::
+
+## Exact matching
+
+:::{.incremental}
+
+- If we match cases exactly on all observed characteristics, the treatment is
+necessarily independent of all those characteristics within groups.
+- Unfortunately, there is no way to test the conditional independence assumption
+with the potential outcome variables because we can’t observe both $Y^0$ and 
+$Y^1$. There might always be something else out there that opens a backdoor 
+path.
+
+:::
+
+## What should I use for *S* variables?
+
+- We think so much about omitted variable bias that we don’t often consider the 
+risk of overcontrolling
+- Using any approach, there is a risk of removing some of the true effect of 
+$T$ by controlling for (or conditioning on) post-treatment variables
+
+## Don't condition on post-treatment variables
+
+:::: {.columns}
+
+::: {.column width="60%"}
+
+```{r ptdag , out.width="90%", fig.asp = 1}
+dag3 <- dagify( Y ~ X + A + B,
+                T ~ S ,
+                A ~ T ,
+                B ~ T ,
+                X ~ U ,
+                S ~ U ,
+                exposure = "T" ,
+                outcome = "Y" ,
+                coords = list( x=c(T=.2,S=0,U=.8,Y=2.2,X=2,A=1.1,B=1.3) 
+                               , y=c(T=0,Y=0,S=1,X=1,U=2,A=.5,B=-.5) )) %>% 
+  tidy_dagitty() %>% 
+  mutate( observed = if_else(name=="U" | name=="V" , "No" , "Yes" ))
+
+
+ptdag <- dag3 %>% 
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend, 
+             shape = observed )) +
+  geom_dag_edges() +
+  geom_dag_point() +
+  geom_dag_text(col = "black" ) +
+  theme_dag(legend.position = "none") +
+  scale_shape_discrete(solid = FALSE) +
+  scale_shape_manual(values = c(1,0)) +
+  scale_y_continuous(limits = c(-1.2,2.2)) +
+  scale_x_continuous(limits = c(-.2,2.4))
+
+ptdag
+
+```
+
+:::
+
+::: {.column width="40%"}
+
+If we control for A and B here, we're not unconfounding the relationship
+between T and Y. Rather, we're controlling away part of the true effect of T!
+This is why we shouldn't control for (or stratify on) post-treatment variables.
+
+:::
+
+::::
+
+## Three assumptions
+
+:::{.incremental}
+
+1. Selection on observables (CIA)
+2. Overlap (any individual case has a non-zero probability of treatment)
+3. Stable unit treatment value assumption (SUTVA; among other things, that the
+treatment status and effect of treatment is independent for each case)
+
+:::
+
+# TE heterogeneity
+
+```{r}
+th_ex <- tibble(
+  SES = c(1L,1L,2L,2L,3L,3L) ,
+  n = c(150L,50L,100L,100L,50L,150L) ,
+  degree = c(0L,1L,0L,1L,0L,1L) ,
+  earnings = c(2000,4000,6000,8000,10000,14000)
+)
+th_ex %>% 
+  tt()
+
+```
+
+What are the ATE and ATT?
+
+. . .
+
+**SATE** = $2667
+
+**SATT** = $3000
+
+## Recap of procedure
+
+1. Take the differences between treated and untreated groups within each 
+stratum of $S$
+2. Weight these differences by the right distribution for the estimand of 
+interest:
+  - For the ATT, weight differences by the distribution of $S$ for treated 
+  cases
+  - For the ATE, weight the differences by the total sample distribution of $S$
+
+## What about this?
+
+```{r}
+th_ex2 <- tibble(
+  SES = c(1L,1L,2L,2L,3L,3L) ,
+  n = c(150L,0L,100L,100L,50L,150L) ,
+  degree = c(0L,1L,0L,1L,0L,1L) ,
+  earnings = c(2000,NA,6000,8000,10000,14000)
+)
+th_ex2 %>% 
+  tt()
+
+```
+
+What is the ATE here? ATT?
+
+## Why ATT is the most common estimand
+
+:::{.incremental}
+
+1. As the last example illustrates, sometimes we can only estimate one 
+treatment effect of interest (if that!). 
+2. Since treated cases are usually less frequent than control cases, ATT is 
+often easier to get and is the default in many routines.
+3. We will often focus on the ATT in the interest of time but the ATE (and 
+even ATU) are important in their own right.
+
+:::
+
+
+## Key term: common support
+
+Strata that have only treatment or control cases (not both) are called 
+**off support.** Strata with both treatment and control cases are in the 
+**region of common support.**
+
+## Focal example
+
+**What is the effect of maternal smoking on infant health?**
+
+Data are from a subsample (*N* = 4642) of singleton births in PA between 
+1989-1991. See Almond et al. 2005. "The Costs of Low Birth Weight."
+
+
+## Bring in the data
+
+```{r, echo = TRUE}
+d <- haven::read_dta(here("data", "cattaneo2.dta"))
+d <- d |>  
+  haven::zap_labels() |>             # remove Stata labels
+  mutate( smoker = factor(mbsmoke, 
+                          labels = c("Nonsmoker", "Smoker")) ,
+          zweight = (bweight - mean(bweight)) / sd(bweight)) %>%
+  select( bweight, zweight, lbweight, mbsmoke, smoker, mmarried, 
+          mage, medu, fbaby, alcohol, mrace, nprenatal )
+
+```
+
+::: aside
+
+`zweight` is the standardized birthweight. (Birthweight in grams minus the mean, divided by the standard deviation.) This, as a proxy for health, will be our primary outcome.
+
+:::
+
+## Summary statistics
+
+```{r, echo = TRUE}
+d |>  
+  select_if(is.numeric) %>% 
+  psych::describe(fast = TRUE)
+
+```
+
+## Smoker/non-smoker differences
+
+```{r smoker_boxplot}
+ggplot(d, aes( y = bweight , x = smoker )) + 
+  geom_boxplot(outlier.alpha = .3) +
+  labs(y = "Birthweight (g)" ,
+       x = "") +
+  theme_light()
+```
+
+## T-test of the difference
+
+```{r echo = FALSE}
+t.test( zweight ~ smoker , data = d ) |> 
+  tidy() |>
+  select(estimate, conf.low, conf.high) |> 
+  tt() |> 
+  format_tt(digits = 3)
+
+```
+
+The t-test gives us the naive estimate of the effect of smoking. If we assume the only difference between smokers and non-smokers is smoking, the effect of smoking is to reduce birthweight by .476 standard deviations (276g).
+
+
+## Density plot
+
+```{r smoker_density }
+ggplot(d, aes( x = bweight , color = smoker, fill = smoker )) +
+  geom_density(alpha = .3) +
+  labs(x = "Birthweight (grams)") +
+  theme(legend.title = element_blank()) +
+  theme(legend.position = "top") +
+  theme_light()
+
+```
+
+## Introduction to **MatchIt**
+
+- Implements many different forms of matching
+- Many different options to cover (later)
+- Basic syntax:
+
+```{r, echo = TRUE, eval = FALSE}
+match_object <- matchit(formula,
+                        data = df)
+
+```
+
+## Exact matching by dummy variables
+
+```{r, echo = FALSE}
+library(MatchIt)
+```
+
+```{r, echo = TRUE, eval=FALSE}
+# match on 3 dummy variables only
+ematch_out <- 
+  matchit(mbsmoke ~ mmarried + alcohol + mrace , 
+          data = d,
+          method = "exact")
+
+# confirm all are matched
+ematch_out
+```
+
+Note: later we will define formulas so we don't have to re-type all the variables every time.
+
+## Exact matching by dummy variables
+
+```{r}
+# match on 3 dummy variables only
+ematch_out <- 
+  matchit(mbsmoke ~ mmarried + alcohol + mrace , 
+          data = d,
+          method = "exact")
+
+# confirm all are matched
+ematch_out
+summary(ematch_out)[[2]]
+```
+
+## Get the matched data
+
+```{r echo = TRUE, eval = FALSE}
+# get the matched data
+ematch_data <- match.data(ematch_out)
+
+# glimpse data
+glimpse(ematch_data)
+
+```
+
+## The matched data
+
+```{r}
+# get the matched data
+ematch_data <- match.data(ematch_out)
+
+# glimpse data
+glimpse(ematch_data)
+
+```
+
+::: aside
+
+Note the two new variables at the bottom
+
+:::
+
+## Subclassification
+
+```{r echo = TRUE}
+subclass_table <- ematch_data %>% 
+  group_by(mmarried, alcohol, mrace) %>% 
+  summarize(
+    n_t = sum(mbsmoke),                            # Ntreat
+    n_c = sum(1-mbsmoke),                          # Ncon
+    zbw_t = weighted.mean(zweight, w = mbsmoke),   # mean std bw for treated
+    zbw_c = weighted.mean(zweight, w = 1-mbsmoke), # mean std bw for control
+    row_diff = zbw_t - zbw_c,                      # mean treat-control diff
+    wt_t = weighted.mean( weights, w = mbsmoke),   # mean treat weight
+    wt_c = weighted.mean( weights, w = 1-mbsmoke)) # mean control weight
+```
+
+## Subclassification table
+
+```{r}
+subclass_table
+
+```
+
+## What are the weights doing?
+
+::::{.columns}
+
+::: {.column width="50%"}
+
+#### Unweighted
+
+```{r raw_subclass_hist, out.width="90%"}
+library(GGally)
+subclass_table %>%
+  ungroup() %>%
+  mutate(classid = 1:n()) %>% 
+  select(classid, starts_with("n"), starts_with("wt")) %>% 
+  pivot_longer(-classid,
+               names_to = c(".value", "condition"),
+               names_sep = "_"
+  ) %>% 
+  ggplot(aes(x = factor(classid), fill = condition, weight = n, by = factor(condition), y = after_stat(prop))) +
+    geom_bar(stat = "prop", position = "dodge") +
+      labs(x = "subclass #", y = "proportion of cases in condition") +
+      theme(legend.title = element_blank()) +
+      theme_light() +
+      theme(legend.position = "top") +
+      scale_y_continuous(limits = c(0,.7))
+    
+```
+
+:::
+
+::: {.column width="50%"}
+
+#### Weighted
+
+```{r weighted_subclass_hist, out.width="90%"}
+subclass_table %>%
+  ungroup() %>%
+  mutate(classid = 1:n()) %>% 
+  select(classid, starts_with("n"), starts_with("wt")) %>% 
+  pivot_longer(-classid,
+               names_to = c(".value", "condition"),
+               names_sep = "_"
+  ) %>% 
+  ggplot(aes(x = factor(classid), fill = condition, weight = n*wt, by = factor(condition), y = after_stat(prop))) +
+    geom_bar(stat = "prop", position = "dodge") +
+      labs(x = "subclass #", y = "proportion of cases in condition") +
+      theme(legend.title = element_blank()) +
+      theme_light() +
+      theme(legend.position = "top") +
+      scale_y_continuous(limits = c(0,.7))
+```
+
+:::
+
+::::
+
+## Manually calculating ATT/ATE
+
+```{r, echo = TRUE}
+# manually calculate ATT
+with(subclass_table, 
+     sum(n_t*row_diff) / sum(n_t) )
+
+# manually calculate ATE
+with(subclass_table, 
+     sum((n_t+n_c)*row_diff) / sum(n_t+n_c) )
+```
+
+
+::: aside
+
+You'll never have to do these manual steps. It's just for pedagogical
+purposes!
+
+:::
+
+## ATT by weighted least squares (WLS)
+
+```{r, echo = TRUE}
+m_att <- lm(zweight ~ mbsmoke , data = ematch_data ,
+            weights = weights)
+tidy(m_att)
+
+```
+
+
+::: aside
+
+The weights ensure that the non-smokers' distribution of _S_ is the 
+same as the smokers.
+
+:::
+
+## Statistical theory of matching
+
+The jury is still out on the theory behind some of procedures so it's not obvious in many cases what the right way is to calculate standard errors. 
+
+We will cover bootstrapping later which is now (once again) seen as a good option for getting standard errors.
+
+::: footer
+
+See Iacus, King, and Porro. 2019. "A Theory of Statistical Inference for Matching Methods in Causal Research." _Political Analysis_.
+
+:::
+
+## Lessons from exact matching
+
+### Exact matching contains:
+
+**Matching**: compare treatment/control differences in outcome on cases that 
+are identical on other observed characteristics (i.e., matched)
+
+**Weighting**: apply weights so that these stratum-specific differences are 
+aggregated in a way that reflects the distribution of interest (e.g., ATT)
+
+## Exact matching isn't often practical
+
+```{r, echo = TRUE}
+ematch_out2 <- matchit(mbsmoke ~ mmarried + alcohol + mrace + 
+                         fbaby + mage + medu + nprenatal , 
+                 data = d,
+                 method = "exact")
+ematch_out2
+summary(ematch_out2)[[2]] # get match summary
+```
+
+
+::: aside
+
+Well over half of treated cases now have no match!
+
+:::
+
+## "Feasible" estimates of TEs
+
+- If we do drop cases because of common support concerns, we signal this by 
+calling our estimands "feasible" (i.e., the best we could do!)
+- If we drop _any_ cases, we can get FSATE but not SATE
+- If we drop _treatment_ cases, we can get FSATT but not SATT
+
+But we don't want a method that requires us to throw away tons of data if we don't have to!
+
+
+## Moving beyond exact matching
+
+:::{.incremental}
+
+1. Propensity-score based approaches (parametric or semi-parametric)
+2. Non-PS-based approaches (non-parametric)
+3. Using parametric models (i.e., regression) on a data set preprocessed by (1) or (2)
+
+:::
