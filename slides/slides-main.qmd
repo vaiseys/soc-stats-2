@@ -4,7 +4,7 @@ author: Stephen Vaisey
 subtitle: "Spring 2024"
 code-line-numbers: false
 code-copy: hover
-fontsize: 24pt
+fontsize: 26pt
 format: 
   revealjs:
     slide-number: true
@@ -1072,3 +1072,502 @@ But we don't want a method that requires us to throw away tons of data if we don
 3. Using parametric models (i.e., regression) on a data set preprocessed by (1) or (2)
 
 :::
+
+# Propensity score matching
+
+## The point of propensity scores
+
+Propensity scores are a solution to the problem of _sparseness_. If we can't
+find exact matches for each case because of high dimensional (or fine-grained) 
+data, can we reduce the complexity of the data and find "good enough" matches?
+
+## What is a propensity score?
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+```{r}
+th_ex %>%
+  select(-earnings) %>% 
+  kable()
+```
+
+:::
+
+::: {.column width="50%"}
+
+A **propensity score** is a subject's probability of receiving treatment.
+
+What are the propensity scores for subjects in different levels of 
+_S_? 
+
+Exact matches are also propensity score matches!
+
+:::
+
+::::
+
+## The logic of propensity scores
+
+Because exact matching is impossible when S comprises many variables, 
+propensity scores allow us to summarize S in a single, continuous variable. 
+This allows comparing "apples to apples" as long as we are comfortable with
+"appleness" as defined by the propensity score.
+
+## Two big questions
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+**How do I estimate p-scores?**
+
+- logistic regression
+
+- probit regression
+
+- machine learning (e.g., SVM)
+
+- any other classifier...
+
+:::
+
+::: {.column width="50%"}
+
+**What do I do with them?**
+
+- stratification ("interval matching")
+
+- matching
+
+- weighting
+
+:::
+
+::::
+
+## The plan
+
+- I will first demonstrate the traditional workflow
+
+- Then I will present some newer approaches that aim to rectify the weaknesses
+of the traditional approach
+
+
+## Traditional workflow
+
+```{r workflow, out.width="70%"}
+knitr::include_graphics(here("images", "workflow.JPG"))
+
+```
+
+::: aside
+
+Adapted from Diamond and Sekhon 2014. S/W/M = stratify, weight, or match.
+
+:::
+
+## Propensity scores by logistic regression
+
+```{r, echo = TRUE}
+psmod <- glm( mbsmoke ~ mmarried + alcohol + mrace + fbaby + 
+                mage + I(mage^2) + medu + nprenatal , 
+              data = d ,
+              family = binomial )
+tidy( psmod )
+```
+
+
+## Distribution of propensity score estimates
+
+```{r logit_ps_density}
+# add PS to DF
+d <- d %>% 
+  mutate(ps1 = predict(psmod, type = "response"))
+
+# density plot
+ggplot(d, aes( x = ps1 , fill = smoker, color = smoker, after_stat(scaled) )) + 
+  geom_density(alpha = .3) +
+  labs(x = "Estimated Propensity Score" ,
+       y = "Density") +
+  theme(legend.position = "top") +
+  theme(legend.title = element_blank()) +
+  theme_light()
+
+```
+
+## Distribution of propensity score estimates
+
+```{r logit_ps_box}
+# boxplot
+ggplot(d, aes( y = ps1 , x = smoker )) + 
+  geom_boxplot(outlier.alpha = .3) +
+  labs(y = "Estimated Propensity Score" ,
+       x = "") +
+  theme(legend.position = "top") +
+  theme(legend.title = element_blank()) +
+  theme_light()
+
+```
+
+
+## Model specification
+
+- All the same issues that apply to logistic regression in ordinary 
+circumstances apply here (e.g., goodness of fit, functional form).
+
+- If the model is wrong, the propensity scores may also be wrong!
+
+. . .
+
+The main assessment procedure in the traditional workflow is checking for
+**covariate balance**.
+
+
+## Covariate balance
+
+::: {.incremental}
+
+- Propensity scores can be used to balance the treatment and control groups
+overall in two primary ways:
+  - **Matching** (e.g., matching treated cases to controls with same or very 
+  similar p-scores)
+  - **Weighting** (e.g., applying inverse probability of treatment weights to the 
+  control cases to make their distribution look like the treatment group)
+- Balance on the one-dimensional propensity score, however, does _not_
+guarantee that the treatment and control groups will be balanced on each of the
+individual component variables that was used to estimate the p-score. 
+
+:::
+
+## Example: similar scores, different profiles
+
+```{r}
+d %>% 
+  arrange(ps1, mbsmoke) %>% 
+  filter(mbsmoke==1 | dplyr::lead(mbsmoke)==1) %>%
+  select(smoker:ps1) %>%
+  head(n = 8)
+```
+
+::: aside
+
+This is OK as long as the differences between the treatment and 
+control groups aren't systematic for any variable. We will talk about more formal assessments of balance soon.
+
+:::
+
+## Matching and covariate balance
+
+::: {.incremental}
+
+- Propensity scores are a means to an end: making *all* the *S* variables independent of *T*.
+- Balance on the *propensity score* does not guarantee balance on all the individual covariates.
+- Consider the following equation: $log(\frac{p}{1-p}) = -1 + .3x_1 +.3x_2$.
+- If this is the propensity-score equation, $x_1$ and $x_2$ have the same effect on the propensity. Thus *any* combination of $x_1$ and $x_2$ with the same *sum* will produce the same propensity score, even if the cases are quite different. We'll talk more about this soon.
+
+:::
+
+## Common support and overlap assumption
+
+```{r, echo = TRUE}
+d %>% 
+  group_by(smoker) %>% 
+  summarize_at(vars(ps1), list(min=min,max=max))
+  
+```
+
+
+::: aside
+
+There are some smokers with higher propensities than any nonsmoker and some nonsmokers with lower propensities than any smoker. We would need to decide if these violate the overlap assumption or whether these non-overlapping regions are strictly due to sampling error.
+
+:::
+
+## Visualizing support
+
+```{r strip_plot}
+ggplot( d , 
+        aes( x = smoker , y = ps1 , color = smoker )) +
+  geom_jitter(alpha = .5, size = .3, width = .2) +
+  theme(legend.position = "none") +
+  coord_flip() +
+  labs(x = "", y = "Est. propensity score") +
+  annotate(geom="rect", ymin = .013, ymax = .039, 
+           xmin = .8, xmax = 1.2, fill = "#F8766D", alpha = .2) +
+  annotate(geom="rect", ymin = .849, ymax = .926, 
+           xmin = 1.8, xmax = 2.2, fill = "#00BFC4", alpha = .2) +
+  theme_light()
+
+  
+```
+
+## Three options to start using p-scores
+
+::: {.incremental}
+
+1. **Stratify**: divide the cases into strata of the p-score (perhaps 5-10) to
+approximate exact matching (a.k.a., "subclassification" or "interval matching")
+2. **Match**: create (typically) 1:1 pairs of treatment and control cases
+with propensity scores that are as similar as possible
+3. **Weight**: use the p-score to make inverse probability of treatment weights
+to balance the distributions of the T&C samples
+
+:::
+
+. . .
+
+We are going to focus on **weighting** only.
+
+# Propensity score weighting
+
+## What is weighting?
+
+::: {.incremental}
+
+- This approach does not sort individual cases into bins.
+- It uses **inverse probability of treatment weights** (IPTW) based on each case's propensity score directly.
+- The idea is to apply a weight to each case that makes the treatment and the control *groups* balanced on the propensity score and therefore (hopefully) on the individual covariates.
+
+:::
+
+## IPTW is like survey weighting
+
+Sex    | P(population) | P(sample) | formula | weight
+:------|:--------------|:----------|:--------|:-------
+Male   | .50           | .40       | .50/.40 | 1.25
+Female | .50           | .60       | .50/.60 | .80
+
+In surveys, we give more weight to groups that don’t show up as much 
+as they should in the sample. The logic with IPTW is the same – in an 
+experiment the treatment and control groups “should” be balanced in their 
+propensity to receive treatment and on any other factors as well.
+
+## Weighting for ATT
+
+::: {.incremental}
+
+- We can transform the propensity score into a weight so that the control group 
+has the same average propensity to smoke as the treatment group.
+- This works by giving more weight to high-propensity controls and less weight 
+to low-propensity controls (like survey weights).
+- Treatment cases all get a weight of 1 because the treatment cases already look like themselves!
+
+:::
+
+. . .
+
+$$w_i = T_i + (1-T_i)\frac{P(T=1|\mathbf{X}_i)}{1-P(T=1|\mathbf{X}_i)}$$
+
+
+## Getting ready
+
+Our code will be easier to write and read if we pre-define formulas. We want (at least) two versions for different uses:
+
+1. A version that simply lists the covariates
+2. A version that contains a regression specification
+
+```{r, echo = TRUE}
+
+# List version
+trt_form1 <- "mbsmoke ~ mmarried + mrace + alcohol + fbaby + 
+  mage + medu + nprenatal"
+
+# Propensity score model version
+trt_form2 <- "mbsmoke ~ mmarried + mrace + alcohol + fbaby + 
+  mage + medu + nprenatal + I(mage^2) + I(medu^2) + I(nprenatal^2)"
+
+```
+
+
+## Creating the weights manually
+
+Creating weights that balance the treatment and control groups on the 
+propensity score is relatively simple.
+
+```{r, echo = TRUE}
+psmod <- glm(as.formula(trt_form2), data = d, family = binomial())
+
+d <- d %>% 
+  mutate(pscore = predict(psmod, type = "response") ,
+         attwt = if_else(mbsmoke==1, 1 , pscore/(1-pscore) ),
+         atewt = if_else(mbsmoke==1, 1/pscore , 1/(1-pscore) ))
+
+```
+
+. . .
+
+- The ATT weight makes the _controls_ look like the treatment.
+- The ATE weight makes _both groups_ look like the total sample.
+
+## ATT weights improve balance
+
+```{r weightcompare_boxplot}
+# boxplot comparison
+## unweighted
+p1 <- ggplot(d, aes( y = pscore , x = smoker )) + 
+  geom_boxplot(outlier.alpha = .3) +
+  labs(y = "Estimated Propensity Score" ,
+       x = "Original") +
+  theme(legend.position = "top") +
+  theme(legend.title = element_blank()) +
+  theme_light()
+
+## weighted
+p2 <- ggplot(d, aes( y = pscore , x = smoker, weight = attwt )) + 
+  geom_boxplot(outlier.alpha = .3) +
+  labs(y = element_blank() ,
+       x = "Weighted") +
+  theme(legend.position = "top") +
+  theme(legend.title = element_blank()) +
+  theme_light()
+
+## combine
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+
+```
+
+## Use `WeightIt` instead of manual calculation
+
+- `WeightIt` is an excellent package written by Noah Greifer
+- Just like `MatchIt` brings many capabilities under one pacakge, `WeightIt` serves as a wrapper on the myriad weighting algorithms out there, giving them a unified syntax.
+
+```{r echo = TRUE}
+library(WeightIt)
+W1 <- weightit(as.formula(trt_form2) ,
+               data = d ,
+               method = "ps" ,    # propensity score weighting
+               s.weights = NULL,  # placeholder for sampling weights
+               estimand = "ATT")  # ATT estimand (not ATE)
+
+```
+
+## {.smaller}
+
+```{r}
+summary(W1)
+
+```
+
+
+## Interpreting the summary
+
+This `summary` will give you a sense of the distribution of weights. The 
+lowest weight is `r round(min(W1$ps), 3)`. These are cases that are so
+unlike the smokers that they don't tell us much about the counterfactual
+world in which they smoke.
+
+The **effective sample size** gives a sense of how much useful counterfactual information we have about the control cases. It's calculated as:
+
+$$\Sigma(w)^2 / \Sigma(w^2)$$
+
+::: notes
+
+"Weights with low variability are desirable because they improve the precision 
+of the estimator. This variability is presented in several ways: by the ratio 
+of the largest weight to the smallest in each group, the coefficient of 
+variation (standard deviation divided by the mean) of the weights in each 
+group, and the effective sample size computed from the weights." (from
+WeightIt help)
+
+:::
+
+## Assessing covariate balance
+
+### Standardized bias
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+#### For ATE:
+
+$$\text{bias}=\frac{\bar{x}_T - \bar{x}_C}{\sqrt{\frac{s^2_T + s^2_C}{2}}}$$
+
+#### For ATT:
+
+$$\text{bias}=\frac{\bar{x}_T - \bar{x}_C}{s_T}$$
+
+:::
+
+::: {.column width="50%"}
+
+
+- This is like what psychologists call an **effect size**: the difference in z-scores
+between the treatment and control groups.
+- The convention is that this should be no greater than .1 for any T&C 
+comparison for _any_ variable.
+- Some people use the pooled definition (on the left) regardless of the desired estimand as it is more "conservative."
+
+:::
+
+::::
+
+## Kolmogorov-Smirnov distance
+
+- We want to match the overall *shape* of the distribution, not just the mean.
+- KSD is the proportion of non-overlap between two distributions (or maximum distance between two cumulative distributions).
+- Two identical distributions have distance of 0; two non-overlapping distributions have distance of 1.
+
+```{r, out.width="35%"}
+knitr::include_graphics(here("images", "KS2_Example.png"))
+
+```
+
+## Balance checking with `cobalt`
+
+- `cobalt` is an *excellent* package written by Noah Greifer
+- *CO*variate *BAL*ance *T*ables
+- main functions are:
+  - `bal.tab` (balance tables)
+  - `bal.plot` (to compare single covariate distributions)
+  - `love.plot` (graphical balance checking; same info as `bal.tab` in graph form)
+
+## Setting `love.plot` options
+
+I don't want to type the same thing a million times so I define a custom function. 
+
+```{r, echo = TRUE}
+library(cobalt)
+love_plot <- function(x) {
+  love.plot(x,
+            binary = "std" ,            # use same formula for binary vars
+            continuous = "std" ,        # standardize cont. variables
+            abs = TRUE ,                # absolute value
+            stats = c("m", "ks") ,      # std. bias and Kolmogorov-Smirnov
+            s.d.denom = "treat",        # use for ATT
+            line = TRUE ,               # connect with lines
+            var.order = "adj" ,         # sort by adjusted order
+            thresholds = c(.10, .05))   # rules of thumb 
+}
+
+```
+
+## Checking balance
+
+```{r iptw_love, echo=TRUE, out.width="60%"}
+love_plot(W1)
+```
+
+Looks pretty good. Note: if we hadn't had `I(medu^2)` in the model, we would *not* have had acceptable balance.
+
+## Assessing overlap
+
+```{r balplot_iptw, echo = TRUE, out.width="65%"}
+bal.plot(W1, var.name = "prop.score", which = "both", type = "histogram",
+         mirror = TRUE)
+```
+
+## Estimate ATT
+
+```{r, echo = TRUE}
+lm(zweight ~ mbsmoke, data = d, weights = W1$weights ) %>% tidy()
+
+```
+
+The ATT estimate is thus **-.382**. 
+
+## Bootstrapping
+
+For a publication version, we can and should do bootstrapping of the whole workflow. I am not going to demonstrate that today.
