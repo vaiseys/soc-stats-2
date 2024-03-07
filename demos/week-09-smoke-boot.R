@@ -40,7 +40,8 @@ out_form <- "bweight ~ mbsmoke + mmarried + mhisp + foreign + alcohol +
 est_weights <- weightit(as.formula(treat_form),
                         data = d,
                         estimand = "ATT",
-                        over = TRUE)
+                        method = "ebal",
+                        moments = 3)
 
 # regression
 est_att <- lm(as.formula(out_form),
@@ -80,7 +81,7 @@ get_att <- function() {
 set.seed(12345)
 
 results <- tibble(
-  rep = 1:250) |>  # should be 500-1000 for real
+  rep = 1:200) |>  # should be 500-1000 for real
   rowwise() |> 
   mutate(att = get_att()) |> 
   ungroup()

@@ -32,8 +32,8 @@ out_form <- "re78 ~ treat + age + I(age^2) +
 # weights
 est_weights <- weightit(as.formula(treat_form),
                         data = d,
-                        estimand = "ATT",
-                        over = TRUE)
+                        method = "glm",
+                        estimand = "ATT")
 
 # regression
 est_att <- lm(as.formula(out_form),
