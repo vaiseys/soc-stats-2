@@ -81,3 +81,23 @@ avg_slopes(cbps_att_est_2,
            wts = cbps_weights$weights,
            by = "msmoke")
 
+### multinomial cbps ####
+d$msmoke <- as.factor(d$msmoke)
+
+cbps_mult_weights <- weightit(trt_form_ff,
+                              data = d,
+                              method = "cbps",
+                              estimand = "ate",
+                              over = FALSE)
+
+summary(cbps_mult_weights)
+
+love.plot(cbps_mult_weights,
+          thresholds = c(.1, .05),
+          stats = c("m", "ks"))
+
+cbps_mult_ate_est <- lm(out_form,
+                        data = d,
+                        weights = cbps_mult_weights$weights)
+tidy(cbps_mult_ate_est,
+     conf.int = TRUE)
