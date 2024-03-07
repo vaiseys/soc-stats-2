@@ -40,7 +40,8 @@ tidy(est_w1)
 w2 <- weightit(treat ~ x + z,
                data = simdata,
                method = "cbps",
-               estimand = "ate")
+               estimand = "ate",
+               over = FALSE)
 
 est_w2 <- lm(y ~ treat,
              data = simdata,
@@ -61,11 +62,6 @@ est_w3 <- lm(y ~ treat,
 tidy(est_w3)
 
 # one version of DR (correct!)
-w3 <- weightit(treat ~ x + z,
-               data = simdata,
-               method = "ebal",
-               estimand = "ate")
-
 dr_est_w3 <- lm(y ~ treat + x * z,         # this makes it work
                 data = simdata,
                 weights = w3$weights)
@@ -97,4 +93,32 @@ dr2_est_m1 <- lm(y ~ treat + x * z,        # now ff is correct on both sides
                  data = simdata,
                  weights = m1$weights)
 
-tidy(dr2_est_m1)                           # smallest SEs yet!  
+tidy(dr2_est_m1)                           # smallest SEs yet!
+
+
+# making weighting work
+### cbps version
+w4 <- weightit(treat ~ x + z + x:z,        # correct ff
+               data = simdata,
+               method = "cbps",
+               estimand = "ate",
+               over = FALSE)
+
+est_w4 <- lm(y ~ treat,
+             data = simdata,
+             weights = w4$weights)
+
+tidy(est_w4)
+
+### ebal version
+w5 <- weightit(treat ~ x + z,    
+               data = simdata,
+               method = "ebal",
+               estimand = "ate",
+               int = TRUE)
+
+est_w5 <- lm(y ~ treat,
+             data = simdata,
+             weights = w5$weights)
+
+tidy(est_w5)
