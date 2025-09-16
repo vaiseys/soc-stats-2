@@ -1,7 +1,7 @@
 ---
 title: "Soc 723"
 author: Stephen Vaisey
-subtitle: "Spring 2024"
+subtitle: "Fall 2025"
 code-line-numbers: false
 code-copy: hover
 fontsize: 26pt
@@ -23,7 +23,13 @@ library(tinytable)
 library(broom)
 ```
 
-# Theoretical background
+# Review
+
+## Exam review
+
+## GSS 2024
+
+# Causal inference: theoretical background
 
 ## Asking causal questions
 
