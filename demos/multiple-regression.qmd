@@ -1,0 +1,186 @@
+---
+title: "Multiple regression"
+format: html
+embed-resources: true
+---
+
+```{r}
+library(tidyverse)
+library(broom)
+library(hrbrthemes)
+theme_set(theme_ipsum_rc())
+```
+
+## Regression as conditional distribution
+
+-   conditional distribution (2 means basically a t-test)
+-   conditional means (cat. or continuous predictors)
+-   sum of squares
+
+```{r}
+d <- read_rds(here::here("data", "cattaneo2.rds")) |>
+  haven::zap_labels()
+
+m1 <- lm(bweight ~ mbsmoke,
+         data = d)
+summary(m1)
+```
+
+```{r}
+ds <- expand_grid(
+  t = 0:1,
+  id = 1:2500
+)
+
+ds <- ds |>
+  rowwise() |> 
+  mutate(bweight = if_else(t == 1,
+                           rnorm(n = 1,
+                                 mean = 3100,
+                                 sd = 50),
+                           rnorm(n = 1,
+                                 mean = 3400,
+                                 sd = 800)))
+
+ggplot(ds,
+       aes(x = bweight,
+           group = factor(t),
+           color = factor(t))) +
+  geom_density()
+
+m2 <- lm(bweight ~ t,
+         data = ds)
+summary(m2)
+
+```
+
+
+```{r}
+m3 <- lm(bweight ~ medu,
+         data = d)
+summary(m3)
+```
+
+## "Linear in the coefficients"
+
+-   coefficients are just multiplied by variables
+-   OK to have polynomials, etc.
+
+```{r}
+ggplot(d,
+       aes(x = medu,
+           y = bweight)) +
+  geom_smooth(method = "lm",
+              formula = y ~ poly(x,2),
+              se = FALSE) +
+  geom_jitter(alpha = .1)
+```
+
+```{r}
+m4 <- lm(bweight ~ medu + I(medu^2),
+         data = d)
+summary(m4)
+```
+
+```{r}
+d |> 
+  group_by(medu) |> 
+  summarize(mw = mean(bweight),
+            n = n()) |> 
+  ggplot(aes(x = medu,
+             y = mw)) +
+  geom_point() +
+  geom_line() +
+  geom_smooth(
+    data = d,
+    method = "lm",
+    formula = y ~ poly(x,2),
+    mapping = aes(x = medu,
+                  y = bweight),
+    se = FALSE)
+```
+
+## Controlling
+
+-   "Adjusting" for a third variable
+-   this is how we "hold it constant"
+
+```{r}
+# original adjustment model
+m1 <- lm(mpg ~ wt + disp,
+         data = mtcars)
+tidy(m1)
+
+# condition out z from both y and x
+myz <- lm(mpg ~ disp,
+          data = mtcars)
+mxz <- lm(wt ~ disp,
+          data = mtcars)
+
+# get adjusted versions of y and x
+mtcars$yr <- residuals(myz)
+mtcars$xr <- residuals(mxz)
+
+# beta here is equivalent
+mstar <- lm(yr ~ xr,
+            data = mtcars)
+tidy(mstar)
+```
+
+```{r}
+ggplot(mtcars,
+       aes(x = cyl,
+           y = mpg)) +
+  geom_point(alpha = .2) +
+  geom_smooth(method = "lm",
+              se = FALSE)
+```
+
+
+## Doing this with matrix algebra
+
+## Errors vs. residuals
+- error is "true"
+- residual is estimate conditional on the model
+- IID assumption
+
+## What's in the error term?
+
+![](images/clipboard-3873874816.png)
+
+(From Huntington-Klein: Depending on the Model Used, A, B, C, and Z Might Be in the Error Term)
+
+## Hypothesis testing 
+- sampling distribution of null
+- "prior" prob of true H1
+
+## Model fit
+- don't worry about R2
+- AIC vs BIC (Weeden and Grusky example?)
+
+## Regression tables
+- baby weight example?
+- lalonde example?
+
+## Joint tests (ANOVA-style) for cat predictors
+
+## Polynomials, interactions, and AMEs
+- choosing a model
+- AME calculations
+
+## Transformations
+- logs
+- square roots
+- standardization
+
+## GLM reminders
+- logit
+- Poisson
+
+
+
+
+
+
+
+
